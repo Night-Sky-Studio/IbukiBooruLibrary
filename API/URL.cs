@@ -5,6 +5,10 @@ using Mono.Web;
 
 namespace IbukiBooruLibrary.API; 
 
+/// <summary>
+/// Custom URL class for scripts
+/// Technically, it's missing proper URLBuilder implementation for C#
+/// </summary>
 public class URL {
     private NameValueCollection _query { get; } = HttpUtility.ParseQueryString(string.Empty);
     private UriBuilder _uri { get; set; } = new UriBuilder();
