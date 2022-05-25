@@ -17,7 +17,7 @@ public class URL {
     private string _path { get; set; }
         
     public Uri Uri => _uri.Uri;
-    //public string href => _uri.Uri.AbsoluteUri;
+
     public override string ToString() => _uri.Uri.AbsoluteUri;
 
     private void UpdateInternalUri() {
@@ -61,7 +61,11 @@ public class URL {
         UpdateInternalUri();
     }
 
+    /// Appends & or ? symbols automatically
     public void AppendString(string value) {
-        _uri.Query += $"&{value}";
+        if (_uri.Query != "") 
+            _uri.Query += $"?{value}";
+        else
+            _uri.Query += $"&{value}";
     }
 }
