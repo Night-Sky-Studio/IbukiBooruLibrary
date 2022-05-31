@@ -68,7 +68,6 @@
       <PackageReference Include="Jint" Version="3.0.0-preview-286" />
       <PackageReference Include="Microsoft.CodeCoverage" Version="17.1.0" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0" />
-      <PackageReference Include="Mono.HttpUtility" Version="1.0.0.1" />
       <PackageReference Include="MSTest" Version="2.2.10" />
       <PackageReference Include="MSTest.TestAdapter" Version="2.2.10" />
       <PackageReference Include="MSTest.TestFramework" Version="2.2.10" />
