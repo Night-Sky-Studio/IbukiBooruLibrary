@@ -9,6 +9,7 @@ using Jint;
 using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Object;
+using Newtonsoft.Json;
 
 namespace IbukiBooruLibrary;
 
@@ -17,7 +18,22 @@ public class BooruException : Exception {
 }
 
 public class Booru : Extension {
+    [JsonProperty]
+    private string _Script { get; set; } = "";
+    
+    //private bool _NeedsInitialization { get; set; } = false;
     private Engine _ScriptEngine { get; }
+
+    [JsonProperty]
+    private int _ActiveAccountID;
+    [JsonIgnore]
+    public int ActiveAccountID {
+        get => _ActiveAccountID;
+        set => _ActiveAccountID = Accounts.TryGetValue(_ActiveAccountID, out _) ? value : -1;
+    }
+    [JsonIgnore]
+    public Account? ActiveAccount => Accounts.TryGetValue(ActiveAccountID, out Account result) ? result : null;
+    public Dictionary<int, Account> Accounts { get; } = new Dictionary<int, Account>();
 
     private string GetPostsURL(int page, int limit, string search, string auth) {
         return _ScriptEngine.Invoke("GetPostsURL", page, limit, search, auth).AsString();
@@ -68,17 +84,40 @@ public class Booru : Extension {
             throw new BooruException($"{error.Get("error").AsString()}: {error.Get("message").AsString()}");
         }
     }
-        
-    public Booru(string Script) {
-        _ScriptEngine = new Engine(config => config.AllowClr(typeof(URL).Assembly))
-            .Execute(Script);
+    
+    #region Constructors
+    /// <summary>
+    /// Parameterless constructor for settings loading.
+    /// </summary>
+    /// <remarks>
+    /// Since we use serialization of settings, we can not just deserialize our
+    /// json back to settings object, the JavaScript engine won't be properly initialized
+    /// and the extension script will not be loaded.
+    /// 
+    /// That solves the problem. We can create an instance of Booru, we just have to initialize script later in the code.
+    /// </remarks>
+    public Booru() {
+        //_NeedsInitialization = true;
+        _ScriptEngine = new Engine(config => config.AllowClr(typeof(URL).Assembly));
+    }
 
-        JsValue extension = _ScriptEngine.Evaluate("Extension");
-            
+    /// <summary>
+    /// Initializes the extension script.
+    /// </summary>
+    /// <remarks>
+    /// We can be sure that our object is created here and
+    /// we have a <see cref="_Script"/> property deserialized.
+    /// </remarks>
+    public void Initialize() {
         try {
+            _ScriptEngine.Execute(_Script);
+            
+            JsValue extension = _ScriptEngine.Evaluate("Extension");
+                
             ObjectInstance ExtensionObject = extension.AsObject();
 
             Name = ExtensionObject.Get("name").AsString();
+            Kind = ExtensionObject.Get("kind").AsString();
             ApiType = ExtensionObject.Get("api_type").AsString();
             BaseURL = ExtensionObject.Get("base_url").AsString();
             TagsSeparator = ExtensionObject.Get("tags_separator").AsString();
@@ -86,4 +125,52 @@ public class Booru : Extension {
             throw new NotSupportedException("Can't create extension using provided script!");
         }
     }
+    
+    public Booru(string Script) {
+        //try {
+            if (Script != "") _Script = Script;
+
+            _ScriptEngine = new Engine(config => config.AllowClr(typeof(URL).Assembly));
+
+            Initialize();
+            //     .Execute(_Script);
+            //
+            // JsValue extension = _ScriptEngine.Evaluate("Extension");
+            //
+            // ObjectInstance ExtensionObject = extension.AsObject();
+            //
+            // Name = ExtensionObject.Get("name").AsString();
+            // Kind = ExtensionObject.Get("kind").AsString();
+            // ApiType = ExtensionObject.Get("api_type").AsString();
+            // BaseURL = ExtensionObject.Get("base_url").AsString();
+            // TagsSeparator = ExtensionObject.Get("tags_separator").AsString();
+            // } catch (Exception) {
+            //     throw new NotSupportedException("Can't create extension using provided script!");
+            // }
+    }
+    #endregion
+    
+    #region Operators
+    protected bool Equals(Booru other) {
+        return _Script == other._Script;
+    }
+
+    public override bool Equals(object? obj) {
+        if (ReferenceEquals(null, obj)) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != this.GetType()) return false;
+        return Equals((Booru)obj);
+    }
+
+    public override int GetHashCode() {
+        return _Script.GetHashCode();
+    }
+    public static bool operator ==(Booru a, Booru b) {
+        return a._Script == b._Script;
+    }
+    
+    public static bool operator !=(Booru a, Booru b) {
+        return a._Script != b._Script;
+    }
+    #endregion
 }
